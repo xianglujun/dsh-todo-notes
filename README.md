@@ -105,7 +105,7 @@ not deleted — reinstall and it is still there.
 
 ## License
 
-Not yet chosen — the copyright holder decides this before publishing.
+MIT — see [LICENSE](LICENSE).
 
 ---
 
