@@ -1,0 +1,59 @@
+{
+  "name": "dsh-todo-notes",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "A to-do and quick-note page for DeepSeek Harness: log what you did each day, with day grouping, tags, per-entry links and progress notes, a calendar that files an entry on any date, and a daily summary for reports. Stored locally in SQLite.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "todo",
+    "notes",
+    "worklog",
+    "sqlite"
+  ],
+  "engines": {
+    "dsh": ">=0.2.2-rc.3 <0.3.0-0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xianglujun/dsh-todo-notes.git"
+  },
+  "homepage": "https://github.com/xianglujun/dsh-todo-notes",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "assets",
+    "README.md"
+  ],
+  "scripts": {
+    "check": "node publish-check.mjs",
+    "prepublishOnly": "node publish-check.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  }
+}

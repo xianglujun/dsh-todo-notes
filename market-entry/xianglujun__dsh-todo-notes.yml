@@ -1,0 +1,23 @@
+# Market entry for awesome-dsh-plugin/awesome-dsh-plugin
+#
+# Submit this file as a pull request that adds exactly one file:
+#     data/plugins/xianglujun__dsh-todo-notes.yml
+# Rename it to match that path; the content below is ready as-is.
+#
+# Rules this file follows, from the repository's contributing guide:
+#   - url must match the repository exactly
+#   - category must be one of the accepted values (workflow / ui / ...)
+#   - description.en is required; description.zh is optional
+#   - the description must be accurate and contain no superlatives
+#   - a description containing ": " must be quoted, or YAML reads it as a key
+#   - icon must be a GitHub-hosted raster image (SVG is refused)
+#   - no "npm:" key: the npm package is linked automatically from the registry,
+#     provided the package.json "repository" field points back at this repo
+
+url: https://github.com/xianglujun/dsh-todo-notes
+name: xianglujun/dsh-todo-notes
+category: workflow
+description:
+  en: 'Adds a day-grouped to-do page to the left sidebar: parent/child entries with colour labels and tags, unfinished and completed tabs, per-entry links and multi-line progress notes, 0-100% progress, a calendar that files an entry on any date, an editable daily summary that lists work in progress separately, and a seven-day chart. Stores everything locally in a SQLite database in a directory you choose; no network, no API key, no third-party dependency.'
+  zh: '左侧菜单里的按天记录页面：父子层级条目、自动配色与标签、未完成/已完成分页签、每条可带链接与多行进度随记、0-100% 进度、点日历任意一天即可补记、可改写的当天小结（进行中的任务单独列出）与近 7 天柱状。数据保存在本机自选目录的 SQLite 数据库里，不联网、不需要 API Key、无第三方依赖。'
+icon: https://raw.githubusercontent.com/xianglujun/dsh-todo-notes/main/assets/icon-180.png

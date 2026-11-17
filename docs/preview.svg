@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" width="640" height="300" role="img" aria-label="The todo page: day-grouped entry cards with a colour bar, a checkbox, a progress bar, a progress-note timeline on the right of the list, a month calendar and a seven-day chart">
+  <!-- A bounded panel so the illustration stays readable on light and dark themes. -->
+  <rect x="32" y="32" width="576" height="236" rx="16" fill="#E9EEF5"/>
+
+  <!-- Page header: title, subtitle, and the entry button in the top-right corner. -->
+  <rect x="52" y="52" width="120" height="12" rx="6" fill="#6B7B8C"/>
+  <rect x="52" y="70" width="168" height="8" rx="4" fill="#A9B6C6"/>
+  <rect x="470" y="48" width="118" height="26" rx="13" fill="#3B82F6"/>
+  <path d="M487 61h12M493 55v12" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round"/>
+
+  <!-- First entry: open, with a colour bar, a checkbox, a title, meta and a progress bar. -->
+  <rect x="52" y="92" width="308" height="62" rx="10" fill="#FFFFFF"/>
+  <rect x="52" y="92" width="5" height="62" rx="2.5" fill="#3B82F6"/>
+  <rect x="70" y="104" width="15" height="15" rx="4.5" fill="none" stroke="#9AA9BB" stroke-width="2"/>
+  <path d="M73.5 111.5l3 3 5-6" fill="none" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="95" y="104" width="210" height="10" rx="5" fill="#6B7B8C"/>
+  <rect x="95" y="120" width="130" height="7" rx="3.5" fill="#B7C2D0"/>
+  <rect x="95" y="134" width="210" height="6" rx="3" fill="#DCE3EC"/>
+  <rect x="95" y="134" width="130" height="6" rx="3" fill="#3B82F6"/>
+
+  <!-- Second entry: completed, so the checkbox is filled and the text is muted. -->
+  <rect x="52" y="166" width="308" height="62" rx="10" fill="#FFFFFF"/>
+  <rect x="52" y="166" width="5" height="62" rx="2.5" fill="#22A06B"/>
+  <rect x="70" y="178" width="15" height="15" rx="4.5" fill="#22A06B"/>
+  <path d="M73.5 185.5l3 3 5-6" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="95" y="178" width="182" height="10" rx="5" fill="#9AA9BB"/>
+  <rect x="95" y="194" width="104" height="7" rx="3.5" fill="#C3CEDB"/>
+  <!-- The progress-note timeline: a rail with a dot per note, newest filled. -->
+  <path d="M300 192v18" stroke="#DCE3EC" stroke-width="2"/>
+  <circle cx="300" cy="188" r="3.5" fill="#3B82F6"/>
+  <circle cx="300" cy="202" r="3" fill="#D5DEE9"/>
+  <circle cx="300" cy="216" r="3" fill="#D5DEE9"/>
+
+  <!-- The list continues past the bottom of the panel. -->
+  <rect x="52" y="240" width="308" height="24" rx="10" fill="#FFFFFF"/>
+  <rect x="52" y="240" width="5" height="24" rx="2.5" fill="#7C5CE0"/>
+  <rect x="70" y="245" width="14" height="14" rx="4" fill="none" stroke="#9AA9BB" stroke-width="2"/>
+  <rect x="94" y="247" width="150" height="9" rx="4.5" fill="#6B7B8C"/>
+
+  <!-- Month calendar: seven columns of days with one day picked. -->
+  <rect x="380" y="92" width="208" height="104" rx="10" fill="#FFFFFF"/>
+  <g fill="#C3CEDB">
+    <rect x="396" y="112" width="14" height="4" rx="2"/>
+    <rect x="422" y="112" width="14" height="4" rx="2"/>
+    <rect x="448" y="112" width="14" height="4" rx="2"/>
+    <rect x="474" y="112" width="14" height="4" rx="2"/>
+    <rect x="500" y="112" width="14" height="4" rx="2"/>
+    <rect x="526" y="112" width="14" height="4" rx="2"/>
+    <rect x="552" y="112" width="14" height="4" rx="2"/>
+  </g>
+  <g fill="#DCE3EC">
+    <rect x="396" y="132" width="20" height="14" rx="4"/>
+    <rect x="422" y="132" width="20" height="14" rx="4"/>
+    <rect x="448" y="132" width="20" height="14" rx="4"/>
+    <rect x="500" y="132" width="20" height="14" rx="4"/>
+    <rect x="526" y="132" width="20" height="14" rx="4"/>
+    <rect x="552" y="132" width="20" height="14" rx="4"/>
+    <rect x="396" y="152" width="20" height="14" rx="4"/>
+    <rect x="422" y="152" width="20" height="14" rx="4"/>
+    <rect x="448" y="152" width="20" height="14" rx="4"/>
+    <rect x="500" y="152" width="20" height="14" rx="4"/>
+    <rect x="526" y="152" width="20" height="14" rx="4"/>
+    <rect x="552" y="152" width="20" height="14" rx="4"/>
+    <rect x="396" y="172" width="20" height="14" rx="4"/>
+    <rect x="422" y="172" width="20" height="14" rx="4"/>
+    <rect x="448" y="172" width="20" height="14" rx="4"/>
+    <rect x="474" y="172" width="20" height="14" rx="4"/>
+    <rect x="500" y="172" width="20" height="14" rx="4"/>
+    <rect x="526" y="172" width="20" height="14" rx="4"/>
+    <rect x="552" y="172" width="20" height="14" rx="4"/>
+  </g>
+  <rect x="474" y="152" width="20" height="14" rx="4" fill="#3B82F6"/>
+  <rect x="500" y="132" width="20" height="14" rx="4" fill="#22A06B"/>
+
+  <!-- Seven-day chart: recorded days in accent, completed ones in green. -->
+  <rect x="380" y="208" width="208" height="56" rx="10" fill="#FFFFFF"/>
+  <g fill="#3B82F6">
+    <rect x="410" y="232" width="14" height="20" rx="4"/>
+    <rect x="454" y="238" width="14" height="14" rx="4"/>
+    <rect x="498" y="226" width="14" height="26" rx="4"/>
+    <rect x="542" y="218" width="14" height="34" rx="4"/>
+  </g>
+  <g fill="#22A06B">
+    <rect x="432" y="220" width="14" height="32" rx="4"/>
+    <rect x="476" y="212" width="14" height="40" rx="4"/>
+    <rect x="520" y="206" width="14" height="46" rx="4"/>
+  </g>
+</svg>

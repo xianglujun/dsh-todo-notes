@@ -1,0 +1,6 @@
+# These files are shipped and loaded as-is, so keep one line ending everywhere:
+# a checkout on another platform must produce the same bytes we verified.
+* text=auto eol=lf
+
+# Binary assets must never be converted.
+*.png binary

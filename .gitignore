@@ -1,0 +1,9 @@
+# Nothing here is built: index.js and client.js ship as plain JavaScript.
+node_modules/
+*.log
+
+# The plugin writes its database only to the user's data directory, never here.
+todos.db
+todos.db-wal
+todos.db-shm
+*.imported-bak
