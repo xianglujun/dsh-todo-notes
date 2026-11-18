@@ -15,6 +15,11 @@ with unfinished entries always ahead of finished ones. An entry whose day is old
 marked as carried over (`结转 N 天`) and can be moved to today with one click. A tag filter row
 sits above the list.
 
+**Looking an entry up.** A search field above the list narrows both tabs by content: an entry
+matches when the term appears in its text, its tags, its links or its notes, ignoring case. It
+combines with the tag filter, reports how many entries matched, and says so when nothing does.
+Esc or the × clears it.
+
 **Progress.** Any entry can carry a 0–100% value. Below 100% the bar uses the page accent colour;
 at 100% it turns green and the entry counts as done. Setting the value back below 100% reopens it,
 so the checkbox and the percentage never disagree.

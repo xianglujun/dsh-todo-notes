@@ -1,6 +1,6 @@
 {
   "name": "dsh-todo-notes",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "type": "module",
   "license": "MIT",
   "description": "A to-do and quick-note page for DeepSeek Harness: log what you did each day, with day grouping, tags, per-entry links and progress notes, a calendar that files an entry on any date, and a daily summary for reports. Stored locally in SQLite.",
