@@ -234,6 +234,7 @@ window.__ModuleLoader__.load({
       searchPlaceholder: '查找待办、随记、链接或标签…',
       searchHint: '在条目正文、随记、链接与标签里查找，不区分大小写；按 Esc 清除。',
       searchClear: '清除查找',
+      searchHide: '收起查找框',
       searchFound: '找到 {count} 条 ·「{query}」',
       searchEmpty: '没有匹配「{query}」的条目。',
       refLabel: '会话',
@@ -444,6 +445,7 @@ window.__ModuleLoader__.load({
       searchPlaceholder: 'Search entries, notes, links or tags…',
       searchHint: 'Looks in an entry’s text, notes, links and tags, ignoring case; press Esc to clear.',
       searchClear: 'Clear the search',
+      searchHide: 'Hide the search field',
       searchFound: '{count} found · “{query}”',
       searchEmpty: 'No entry matches “{query}”.',
       refLabel: 'Session',
@@ -1654,6 +1656,36 @@ button.dtn-tag:hover { filter: brightness(0.95); }
    keeps the full width while the chips scroll sideways on their own. */
 .dtn-filterbar { display: flex; flex-direction: column; gap: 2px; width: 100%; }
 .dtn-filterbar .dtn-filter { padding-top: 2px; }
+/* The tag chips scroll; the magnifier stays put at the right end of the line. */
+.dtn-filterline { display: flex; align-items: center; gap: 8px; width: 100%; }
+.dtn-filterline .dtn-filter { flex: 1 1 auto; min-width: 0; }
+.dtn-search-toggle {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0;
+  cursor: pointer;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+.dtn-search-toggle:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: var(--dsw-alias-border-l2);
+}
+.dtn-search-toggle.is-on {
+  color: var(--dtn-accent);
+  background: var(--dsw-alias-interactive-bg-hover);
+  border-color: color-mix(in srgb, var(--dtn-accent) 40%, transparent);
+}
+.dtn-search-toggle.is-on:hover { background: var(--dsw-alias-interactive-bg-active); }
 .dtn-search { position: relative; display: flex; align-items: center; width: 100%; }
 .dtn-search-input {
   box-sizing: border-box;
@@ -3254,6 +3286,12 @@ button.dtn-tag:hover { filter: brightness(0.95); }
     function PlusGlyph() {
       return h('svg', { viewBox: '0 0 16 16', width: 13, height: 13, 'aria-hidden': 'true', focusable: 'false' },
         stroke('M8 3.5v9M3.5 8h9', 1.4));
+    }
+
+    function SearchGlyph() {
+      return h('svg', { viewBox: '0 0 16 16', width: 13, height: 13, 'aria-hidden': 'true', focusable: 'false' },
+        stroke('M7.2 2.8a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8z', 1.4),
+        stroke('M10.5 10.5l2.7 2.7', 1.5));
     }
 
     function PencilGlyph() {
@@ -5137,6 +5175,17 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       // Free-text lookup over the entries. `lists` applies it together with the
       // tag filter, so both list tabs and their day groups agree on what shows.
       const [query, setQuery] = useState('');
+      // The lookup field stays behind a magnifier until it is asked for, and
+      // reopens itself while a term is active, so an active filter is never
+      // invisible.
+      const [searchOpen, setSearchOpen] = useState(false);
+      const searchRef = useRef(null);
+
+      useEffect(() => {
+        if (searchOpen !== true) return;
+        const node = searchRef.current;
+        if (node !== null && node !== undefined && typeof node.focus === 'function') node.focus();
+      }, [searchOpen]);
       const [renamingTag, setRenamingTag] = useState(null);
       const [renameText, setRenameText] = useState('');
       const [editingItemId, setEditingItemId] = useState(null);
@@ -5940,9 +5989,20 @@ button.dtn-tag:hover { filter: brightness(0.95); }
         setVisibleGroups(FIRST_GROUPS);
       };
 
-      const searchBar = h('div', { key: 'search', className: 'dtn-search' }, [
+      /** Put the lookup away. Clearing first, so a hidden field never filters. */
+      const closeSearch = () => {
+        clearSearch();
+        setSearchOpen(false);
+      };
+
+      // A box holding only spaces is not a term: it must not pin the field open.
+      const searching = query.trim() !== '';
+      const showSearch = searchOpen === true || searching;
+
+      const searchBar = showSearch !== true ? null : h('div', { key: 'search', className: 'dtn-search' }, [
         h('input', {
           key: 'input',
+          ref: searchRef,
           className: 'dtn-search-input',
           type: 'text',
           value: query,
@@ -5958,50 +6018,71 @@ button.dtn-tag:hover { filter: brightness(0.95); }
           onKeyDown: (event) => {
             if (event.key === 'Escape') {
               event.preventDefault();
-              clearSearch();
+              closeSearch();
             }
           },
         }),
-        query === '' ? null : h('button', {
+        // With a term in the box this clears it; empty, it puts the box away.
+        h('button', {
           key: 'clear',
           type: 'button',
           className: 'dtn-search-clear',
-          title: t('searchClear'),
-          'aria-label': t('searchClear'),
-          onClick: clearSearch,
+          title: searching ? t('searchClear') : t('searchHide'),
+          'aria-label': searching ? t('searchClear') : t('searchHide'),
+          onClick: searching ? clearSearch : closeSearch,
         }, '×'),
       ]);
 
+      /** The magnifier: it opens the field, and closes it again once open. */
+      const searchToggle = h('button', {
+        key: 'search-toggle',
+        type: 'button',
+        className: 'dtn-search-toggle' + (showSearch === true ? ' is-on' : ''),
+        title: showSearch === true ? t('searchHide') : t('searchLabel'),
+        'aria-label': t('searchLabel'),
+        'aria-expanded': showSearch === true,
+        onClick: () => {
+          if (showSearch === true) {
+            closeSearch();
+            return;
+          }
+          setSearchOpen(true);
+        },
+      }, h(SearchGlyph, null));
+
       const filterRow = h('div', { key: 'filter', className: 'dtn-filterbar' }, [
         searchBar,
-        allTags.length === 0 ? null : h('div', {
-          key: 'tags',
-          className: 'dtn-filter',
-          role: 'group',
-          'aria-label': t('tagFilterLabel'),
-        }, [
-          h('span', { key: 'label', className: 'dtn-foot-note' }, t('tagFilterLabel')),
-          h('button', {
-            key: 'all',
-            type: 'button',
-            className: 'dtn-tag' + (tagFilter === null ? ' is-on' : ''),
-            'aria-pressed': tagFilter === null,
-            onClick: () => {
-              setTagFilter(null);
-              setVisibleGroups(FIRST_GROUPS);
-            },
-          }, t('tagAll')),
-          ...allTags.map((tag) => h('button', {
-            key: tag.key,
-            type: 'button',
-            className: 'dtn-tag' + (tagFilter !== null && tagKey(tagFilter) === tag.key ? ' is-on' : ''),
-            style: tagStyle(tag.name, tagFilter !== null && tagKey(tagFilter) === tag.key),
-            'aria-pressed': tagFilter !== null && tagKey(tagFilter) === tag.key,
-            onClick: () => {
-              setTagFilter(tagFilter !== null && tagKey(tagFilter) === tag.key ? null : tag.name);
-              setVisibleGroups(FIRST_GROUPS);
-            },
-          }, tag.name + ' ' + tag.count)),
+        h('div', { key: 'line', className: 'dtn-filterline' }, [
+          allTags.length === 0 ? null : h('div', {
+            key: 'tags',
+            className: 'dtn-filter',
+            role: 'group',
+            'aria-label': t('tagFilterLabel'),
+          }, [
+            h('span', { key: 'label', className: 'dtn-foot-note' }, t('tagFilterLabel')),
+            h('button', {
+              key: 'all',
+              type: 'button',
+              className: 'dtn-tag' + (tagFilter === null ? ' is-on' : ''),
+              'aria-pressed': tagFilter === null,
+              onClick: () => {
+                setTagFilter(null);
+                setVisibleGroups(FIRST_GROUPS);
+              },
+            }, t('tagAll')),
+            ...allTags.map((tag) => h('button', {
+              key: tag.key,
+              type: 'button',
+              className: 'dtn-tag' + (tagFilter !== null && tagKey(tagFilter) === tag.key ? ' is-on' : ''),
+              style: tagStyle(tag.name, tagFilter !== null && tagKey(tagFilter) === tag.key),
+              'aria-pressed': tagFilter !== null && tagKey(tagFilter) === tag.key,
+              onClick: () => {
+                setTagFilter(tagFilter !== null && tagKey(tagFilter) === tag.key ? null : tag.name);
+                setVisibleGroups(FIRST_GROUPS);
+              },
+            }, tag.name + ' ' + tag.count)),
+          ]),
+          searchToggle,
         ]),
       ]);
 
