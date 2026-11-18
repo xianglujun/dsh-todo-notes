@@ -3741,6 +3741,14 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       return list;
     }
 
+    /**
+     * One item of the daily report. Items are numbered rather than dashed, and
+     * the numbering lives here so the report's shape changes in one place.
+     */
+    function numberedLine(index, text) {
+      return (index + 1) + '. ' + text;
+    }
+
     /** The automatic summary text: the user may rewrite it and save it as is. */
     function summaryOf(day, view, tags, t) {
       const lines = [t('summaryHead', {
@@ -3752,9 +3760,10 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       if (view.done.length > 0) {
         lines.push('');
         lines.push(t('summaryDoneHeading') + '（' + view.done.length + '）');
-        for (const item of view.done) {
-          lines.push('- ' + (item.completedAt === null ? '' : clockOf(item.completedAt) + ' ') + firstLine(item.text));
-        }
+        view.done.forEach((item, index) => {
+          const when = item.completedAt === null ? '' : clockOf(item.completedAt) + ' ';
+          lines.push(numberedLine(index, when + firstLine(item.text)));
+        });
       }
       // In-flight work gets its own block, and leaves the "still open" list:
       // the report reads done / in progress / not started, with no repeats.
@@ -3762,20 +3771,22 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       if (running.length > 0) {
         lines.push('');
         lines.push(t('summaryProgressHeading') + '（' + running.length + '）');
-        for (const item of running) {
+        running.forEach((item, index) => {
           const gap = daysBetween(item.day, day);
-          lines.push('- ' + item.progress + '% ' + firstLine(item.text) + (gap > 0 ? '（' + gap + ' 天）' : ''));
-        }
+          const suffix = gap > 0 ? '（' + gap + ' 天）' : '';
+          lines.push(numberedLine(index, item.progress + '% ' + firstLine(item.text) + suffix));
+        });
       }
       const runningIds = new Set(running.map((item) => item.id));
       const notStarted = view.open.filter((item) => !runningIds.has(item.id));
       if (notStarted.length > 0) {
         lines.push('');
         lines.push(t('summaryOpenHeading') + '（' + notStarted.length + '）');
-        for (const item of notStarted) {
+        notStarted.forEach((item, index) => {
           const gap = daysBetween(item.day, day);
-          lines.push('- ' + firstLine(item.text) + (gap > 0 ? '（' + gap + ' 天）' : ''));
-        }
+          const suffix = gap > 0 ? '（' + gap + ' 天）' : '';
+          lines.push(numberedLine(index, firstLine(item.text) + suffix));
+        });
       }
       if (tags.length > 0) {
         lines.push('');
