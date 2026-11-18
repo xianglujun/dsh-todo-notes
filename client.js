@@ -136,6 +136,7 @@ window.__ModuleLoader__.load({
       logsLabel: '随记',
       logPlaceholder: '写进度随记，可多行（Ctrl+回车添加）',
       logAdd: '加随记',
+      logEdit: '编辑这条随记',
       removeLog: '删除这条随记',
       moreLogs: '还有 {count} 条随记',
       logLatest: '最新',
@@ -339,6 +340,7 @@ window.__ModuleLoader__.load({
       logsLabel: 'Progress notes',
       logPlaceholder: 'Write a progress note, multiple lines allowed (Ctrl+Enter adds it)',
       logAdd: 'Add note',
+      logEdit: 'Edit this note',
       removeLog: 'Remove this note',
       moreLogs: '{count} more notes',
       logLatest: 'latest',
@@ -1005,6 +1007,57 @@ a.dtn-note-link:hover { text-decoration: underline; }
   background: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 13%, transparent);
   border-color: color-mix(in srgb, var(--dsw-alias-state-warn-primary) 30%, transparent);
 }
+
+/* ------------------------------------------- rewriting one progress note -- */
+
+/* The inline box that rewrites a note, used by the card timeline and the entry
+   editor alike, so a note looks the same wherever it is edited. */
+.dtn-log-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+.dtn-log-edit-input {
+  min-height: 48px;
+  font-size: 12.5px;
+  line-height: 18px;
+}
+.dtn-log-edit-actions { display: flex; align-items: center; gap: 6px; }
+.dtn-log-edit-actions .dtn-btn { min-width: 56px; font-size: 12px; }
+
+/* The ✎ that opens it: quiet until the row is hovered or focused. */
+.dtn-log-edit-open {
+  appearance: none;
+  position: absolute;
+  right: 0;
+  top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  color: var(--dsw-alias-label-caption);
+  background: var(--dsw-alias-bg-base);
+  border: 0;
+  border-radius: 5px;
+}
+.dtn-trail-item:hover .dtn-log-edit-open,
+.dtn-trail-item:focus-within .dtn-log-edit-open,
+.dtn-log-edit-open:focus { opacity: 1; }
+.dtn-log-edit-open:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-active); }
+/* The note text yields room for the ✎ rather than running underneath it. */
+.dtn-trail-item:hover .dtn-trail-text,
+.dtn-trail-item:focus-within .dtn-trail-text { padding-right: 22px; }
 
 /* ----------------------------------------------------------------- inline --- */
 
@@ -2780,6 +2833,25 @@ button.dtn-tag:hover { filter: brightness(0.95); }
           commit(items, [eventOf('log-add', changed, { note: firstLine(log.text) })]);
           return true;
         },
+        /**
+         * Rewrite one note's text in place. The moment it was written is part
+         * of the trail, so editing the words keeps its place in the timeline.
+         */
+        updateLog(id, index, text) {
+          const item = this.itemById(id);
+          if (item === undefined) return false;
+          const previous = item.logs[index];
+          if (previous === undefined) return false;
+          const log = normalizeLog({ text, at: previous.at });
+          if (log === null) return false;
+          if (log.text === previous.text) return true;
+          const logs = item.logs.slice();
+          logs[index] = log;
+          const changed = { ...item, logs };
+          commit(snapshot.items.map((entry) => (entry.id === id ? changed : entry)),
+            [eventOf('log-edit', changed, { note: firstLine(log.text) })]);
+          return true;
+        },
         removeLog(id, index) {
           const item = this.itemById(id);
           if (item === undefined) return;
@@ -3769,6 +3841,69 @@ button.dtn-tag:hover { filter: brightness(0.95); }
     }
 
     /**
+     * Inline editor for one progress note.
+     *
+     * Notes show up in two places — the timeline on the card and the list in the
+     * entry editor — so both use this box: a note is rewritten the same way
+     * wherever it appears. It owns its own draft text, so the parent only has to
+     * remember *which* note is being edited.
+     */
+    function LogEditBox({ t, text, onSave, onCancel }) {
+      const [value, setValue] = useState(text);
+      const boxRef = useRef(null);
+
+      useEffect(() => {
+        const node = boxRef.current;
+        if (node !== null && typeof node.focus === 'function') node.focus();
+      }, []);
+
+      const save = () => {
+        const trimmed = value.trim();
+        // Emptying a note is not a rewrite; treat it as leaving it alone.
+        if (trimmed === '') {
+          onCancel();
+          return;
+        }
+        onSave(trimmed);
+      };
+
+      return h('div', { className: 'dtn-log-edit' }, [
+        h('textarea', {
+          key: 'input',
+          ref: boxRef,
+          className: 'dtn-inline-input dtn-log-edit-input',
+          rows: 2,
+          value,
+          'aria-label': t('logEdit'),
+          onChange: (event) => { setValue(event.target.value); },
+          onKeyDown: (event) => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault();
+              save();
+            } else if (event.key === 'Escape') {
+              event.preventDefault();
+              onCancel();
+            }
+          },
+        }),
+        h('div', { key: 'actions', className: 'dtn-log-edit-actions' }, [
+          h('button', {
+            key: 'save',
+            type: 'button',
+            className: 'dtn-btn is-primary is-quiet',
+            onClick: save,
+          }, t('save')),
+          h('button', {
+            key: 'cancel',
+            type: 'button',
+            className: 'dtn-btn is-quiet',
+            onClick: onCancel,
+          }, t('cancel')),
+        ]),
+      ]);
+    }
+
+    /**
      * One entry as a sticky note: a paper-coloured card with the entry's own
      * colour, a slight tilt on the wall, its links, its progress trail, and its
      * sub-entries nested inside it.
@@ -3793,11 +3928,19 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       const [draft, setDraft] = useState(null);
       const [draftText, setDraftText] = useState('');
       const [draftError, setDraftError] = useState(null);
+      // The index of the note being rewritten, if any: one inline editor at a time.
+      const [editingLog, setEditingLog] = useState(null);
 
       const openDraft = (kind) => {
         setDraft(draft === kind ? null : kind);
         setDraftText('');
         setDraftError(null);
+        setEditingLog(null);
+      };
+
+      const saveLogEdit = (index, text) => {
+        if (api.updateLog(item.id, index, text) === false) return;
+        setEditingLog(null);
       };
 
       const closeDraft = () => {
@@ -4011,7 +4154,12 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       // a small dot per entry, the note itself beside it. The newest entry is
       // marked by a filled dot and stronger text rather than by extra words.
       // Its own inline draft appears here when a note is being added.
-      const recentLogs = item.logs.slice(-3).reverse();
+      // Each shown note keeps its index in `item.logs`, because the display
+      // order is reversed and editing has to address the stored note.
+      const recentLogs = item.logs
+        .map((log, index) => ({ log, index }))
+        .slice(-3)
+        .reverse();
       const trail = item.logs.length === 0 && draft !== 'log'
         ? null
         : h('section', { key: 'trail', className: 'dtn-trail' }, [
@@ -4029,18 +4177,39 @@ button.dtn-tag:hover { filter: brightness(0.95); }
             }, '＋'),
           ]),
           item.logs.length === 0 ? null : h('ol', { key: 'list', className: 'dtn-trail-list' },
-            recentLogs.map((log, index) => h('li', {
-              key: 'log:' + item.logs.length + ':' + index,
-              className: 'dtn-trail-item' + (index === 0 ? ' is-latest' : ''),
+            recentLogs.map((entry) => h('li', {
+              key: 'log:' + entry.index,
+              className: 'dtn-trail-item' + (entry.index === item.logs.length - 1 ? ' is-latest' : ''),
             }, [
               h('span', {
                 key: 'time',
                 className: 'dtn-trail-time',
-                title: index === 0 ? t('logLatest') : '',
-              }, log.at === null ? '' : clockOf(log.at)),
+                title: entry.index === item.logs.length - 1 ? t('logLatest') : '',
+              }, entry.log.at === null ? '' : clockOf(entry.log.at)),
               h('span', { key: 'body', className: 'dtn-trail-body' }, [
                 h('span', { key: 'dot', className: 'dtn-trail-dot', 'aria-hidden': 'true' }),
-                h('span', { key: 'text', className: 'dtn-trail-text' }, log.text),
+                editingLog === entry.index
+                  ? h(LogEditBox, {
+                    key: 'edit',
+                    t,
+                    text: entry.log.text,
+                    onSave: (text) => { saveLogEdit(entry.index, text); },
+                    onCancel: () => { setEditingLog(null); },
+                  })
+                  : h('span', { key: 'text', className: 'dtn-trail-text' }, entry.log.text),
+                editingLog === entry.index
+                  ? null
+                  : h('button', {
+                    key: 'edit',
+                    type: 'button',
+                    className: 'dtn-log-edit-open',
+                    title: t('logEdit'),
+                    'aria-label': t('logEdit'),
+                    onClick: () => {
+                      setDraft(null);
+                      setEditingLog(entry.index);
+                    },
+                  }, '✎'),
               ]),
             ]))),
           draft === 'log'
@@ -4126,6 +4295,8 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       const [linkTitle, setLinkTitle] = useState('');
       const [linkError, setLinkError] = useState(null);
       const [logText, setLogText] = useState('');
+      // The index of the note being rewritten, if any: one inline editor at a time.
+      const [editingLog, setEditingLog] = useState(null);
       // While creating, links and notes are held here and attached on save.
       const [pendingLinks, setPendingLinks] = useState([]);
       const [pendingLogs, setPendingLogs] = useState([]);
@@ -4137,6 +4308,11 @@ button.dtn-tag:hover { filter: brightness(0.95); }
         const node = focus === 'log' ? logRef.current : (focus === 'link' ? linkRef.current : textRef.current);
         if (node !== null && node !== undefined && typeof node.focus === 'function') node.focus();
       }, [focus]);
+
+      const saveLogEdit = (index, text) => {
+        if (item === null || api.updateLog(item.id, index, text) === false) return;
+        setEditingLog(null);
+      };
 
       const close = () => { api.closeEditor(); };
 
@@ -4361,6 +4537,7 @@ button.dtn-tag:hover { filter: brightness(0.95); }
         ? pendingLogs.map((entry, index) => ({
           text: entry.text,
           at: entry.at,
+          index,
           remove: () => {
             setPendingLogs((previous) => previous.filter((candidate, position) => position !== index));
           },
@@ -4368,6 +4545,7 @@ button.dtn-tag:hover { filter: brightness(0.95); }
         : item.logs.map((entry, index) => ({
           text: entry.text,
           at: entry.at,
+          index,
           remove: () => { api.removeLog(item.id, index); },
         }));
 
@@ -4445,21 +4623,37 @@ button.dtn-tag:hover { filter: brightness(0.95); }
           h('span', { key: 'count', className: 'dtn-foot-note' }, String(viewLogs.length)),
         ]),
         viewLogs.length === 0 ? null : h('div', { key: 'list', className: 'dtn-panel-trail' },
-          viewLogs.slice().reverse().map((log, index) => h('div', {
-            key: 'log:' + viewLogs.length + ':' + index,
-            className: 'dtn-note-log',
-          }, [
-            h('span', { key: 'time', className: 'dtn-note-note' }, log.at === null ? '' : clockOf(log.at)),
-            h('span', { key: 'text', className: 'dtn-note-log-text' }, log.text),
-            h('button', {
-              key: 'drop',
-              type: 'button',
-              className: 'dtn-ref-drop',
-              title: t('removeLog'),
-              'aria-label': t('removeLog'),
-              onClick: log.remove,
-            }, '×'),
-          ]))),
+          viewLogs.slice().reverse().map((log, position) => h('div', {
+            key: 'log:' + log.index,
+            className: 'dtn-note-log' + (editingLog === log.index ? ' is-editing' : ''),
+          }, editingLog === log.index
+            ? [h(LogEditBox, {
+              key: 'edit',
+              t,
+              text: log.text,
+              onSave: (text) => { saveLogEdit(log.index, text); },
+              onCancel: () => { setEditingLog(null); },
+            })]
+            : [
+              h('span', { key: 'time', className: 'dtn-note-note' }, log.at === null ? '' : clockOf(log.at)),
+              h('span', { key: 'text', className: 'dtn-note-log-text' }, log.text),
+              h('button', {
+                key: 'edit',
+                type: 'button',
+                className: 'dtn-ref-drop',
+                title: t('logEdit'),
+                'aria-label': t('logEdit'),
+                onClick: () => { setEditingLog(log.index); },
+              }, '✎'),
+              h('button', {
+                key: 'drop',
+                type: 'button',
+                className: 'dtn-ref-drop',
+                title: t('removeLog'),
+                'aria-label': t('removeLog'),
+                onClick: log.remove,
+              }, '×'),
+            ]))),
         h('div', { key: 'add', className: 'dtn-panel-row' }, [
           // A progress note is often a paragraph with a list in it, so it gets a
           // multi-line box: Enter wraps, Ctrl/Cmd+Enter commits.
@@ -4960,6 +5154,7 @@ button.dtn-tag:hover { filter: brightness(0.95); }
         setProgress: (id, value) => store.setProgress(id, value),
         removeLink: (id, index) => store.removeLink(id, index),
         addLog: (id, text) => store.addLog(id, text),
+        updateLog: (id, index, text) => store.updateLog(id, index, text),
         removeLog: (id, index) => store.removeLog(id, index),
         nextColor: () => store.nextColor(),
         toggleTagFilter: (name) => {

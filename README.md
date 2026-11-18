@@ -25,7 +25,9 @@ http/https is accepted.
 
 **Progress notes.** A multi-line note per entry, shown as a compact timeline. Enter inserts a
 newline, Ctrl+Enter (Cmd+Enter on macOS) adds it. Notes and links are added right on the card,
-without opening the editor.
+without opening the editor. An existing note is rewritten in place: the ✎ beside it in the
+timeline, or in the entry's editor, turns it into a box with Save and Cancel, keeping the time it
+was written. Deleting a note is the × in the entry's editor.
 
 **Calendar.** A month grid. One click on any day files a new entry under that date, and lists that
 day's entries underneath.
