@@ -1652,12 +1652,10 @@ button.dtn-tag:hover { filter: brightness(0.95); }
   scrollbar-width: thin;
 }
 
-/* The lookup row: a content search, then the tag chips, stacked so the search
-   keeps the full width while the chips scroll sideways on their own. */
-.dtn-filterbar { display: flex; flex-direction: column; gap: 2px; width: 100%; }
-.dtn-filterbar .dtn-filter { padding-top: 2px; }
-/* The tag chips scroll; the magnifier stays put at the right end of the line. */
-.dtn-filterline { display: flex; align-items: center; gap: 8px; width: 100%; }
+/* The lookup lives on the filter line: collapsed it is a magnifier at the right
+   end of the chips, and opening it grows the field beside that spot, so nothing
+   above the list ever moves. */
+.dtn-filterline { display: flex; align-items: center; gap: 8px; width: 100%; padding-top: 2px; }
 .dtn-filterline .dtn-filter { flex: 1 1 auto; min-width: 0; }
 .dtn-search-toggle {
   appearance: none;
@@ -1665,6 +1663,7 @@ button.dtn-tag:hover { filter: brightness(0.95); }
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  flex: none;
   width: 26px;
   height: 26px;
   margin-left: auto;
@@ -1680,75 +1679,55 @@ button.dtn-tag:hover { filter: brightness(0.95); }
   background: var(--dsw-alias-interactive-bg-hover);
   border-color: var(--dsw-alias-border-l2);
 }
-.dtn-search-toggle.is-on {
-  color: var(--dtn-accent);
-  background: var(--dsw-alias-interactive-bg-hover);
-  border-color: color-mix(in srgb, var(--dtn-accent) 40%, transparent);
-}
-.dtn-search-toggle.is-on:hover { background: var(--dsw-alias-interactive-bg-active); }
-.dtn-search { position: relative; display: flex; align-items: center; width: 100%; }
-.dtn-search-input {
+/* The open field: one pill holding the glyph, the input and the ×. */
+.dtn-search-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   box-sizing: border-box;
-  width: 100%;
-  padding: 8px 34px 8px 34px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--dsw-alias-label-primary);
+  flex: 0 1 260px;
+  min-width: 150px;
+  margin-left: auto;
+  padding: 2px 4px 2px 8px;
   background: var(--dsw-specific-input-major);
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 10px;
+  border-radius: 9px;
 }
-.dtn-search-input:focus {
-  outline: none;
+.dtn-search-inline:focus-within {
   border-color: var(--dtn-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--dtn-accent) 18%, transparent);
 }
-.dtn-search-input::placeholder { color: var(--dsw-alias-label-caption); }
-/* A drawn magnifier, so the field needs no icon dependency. */
-.dtn-search::before {
-  content: '';
-  position: absolute;
-  left: 13px;
-  top: 50%;
-  width: 9px;
-  height: 9px;
-  margin-top: -7px;
-  pointer-events: none;
-  border: 1.5px solid var(--dsw-alias-label-caption);
-  border-radius: 50%;
+.dtn-search-glyph { display: inline-flex; flex: none; color: var(--dsw-alias-label-caption); }
+.dtn-search-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  background: transparent;
+  border: 0;
+  outline: none;
 }
-.dtn-search::after {
-  content: '';
-  position: absolute;
-  left: 21px;
-  top: 50%;
-  width: 5px;
-  height: 1.5px;
-  margin-top: 3px;
-  pointer-events: none;
-  transform: rotate(45deg);
-  background: var(--dsw-alias-label-caption);
-  border-radius: 1px;
-}
+.dtn-search-field::placeholder { color: var(--dsw-alias-label-caption); }
 .dtn-search-clear {
   appearance: none;
-  position: absolute;
-  right: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 20px;
+  height: 20px;
   padding: 0;
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1;
   cursor: pointer;
   color: var(--dsw-alias-label-secondary);
-  background: var(--dsw-alias-interactive-bg-hover);
+  background: transparent;
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
 }
 .dtn-search-clear:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-active); }
 .dtn-filter .dtn-tag { flex: none; }
@@ -5999,91 +5978,84 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       const searching = query.trim() !== '';
       const showSearch = searchOpen === true || searching;
 
-      const searchBar = showSearch !== true ? null : h('div', { key: 'search', className: 'dtn-search' }, [
-        h('input', {
-          key: 'input',
-          ref: searchRef,
-          className: 'dtn-search-input',
-          type: 'text',
-          value: query,
-          placeholder: t('searchPlaceholder'),
-          'aria-label': t('searchLabel'),
-          title: t('searchHint'),
-          onChange: (event) => {
-            setQuery(event.target.value);
-            // A new term re-opens the first groups, or a match could stay hidden
-            // behind "show earlier days".
-            setVisibleGroups(FIRST_GROUPS);
-          },
-          onKeyDown: (event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              closeSearch();
-            }
-          },
-        }),
-        // With a term in the box this clears it; empty, it puts the box away.
-        h('button', {
-          key: 'clear',
+      // Collapsed it is a magnifier; open, the field grows beside it on the same
+      // line, so nothing above the list has to move.
+      const searchControl = showSearch !== true
+        ? h('button', {
+          key: 'search-toggle',
           type: 'button',
-          className: 'dtn-search-clear',
-          title: searching ? t('searchClear') : t('searchHide'),
-          'aria-label': searching ? t('searchClear') : t('searchHide'),
-          onClick: searching ? clearSearch : closeSearch,
-        }, '×'),
-      ]);
+          className: 'dtn-search-toggle',
+          title: t('searchLabel'),
+          'aria-label': t('searchLabel'),
+          'aria-expanded': false,
+          onClick: () => { setSearchOpen(true); },
+        }, h(SearchGlyph, null))
+        : h('span', { key: 'search-inline', className: 'dtn-search-inline' }, [
+          h('span', { key: 'glyph', className: 'dtn-search-glyph', 'aria-hidden': 'true' }, h(SearchGlyph, null)),
+          h('input', {
+            key: 'field',
+            ref: searchRef,
+            className: 'dtn-search-field',
+            type: 'text',
+            value: query,
+            placeholder: t('searchPlaceholder'),
+            'aria-label': t('searchLabel'),
+            title: t('searchHint'),
+            onChange: (event) => {
+              setQuery(event.target.value);
+              // A new term re-opens the first groups, or a match could stay hidden
+              // behind "show earlier days".
+              setVisibleGroups(FIRST_GROUPS);
+            },
+            onKeyDown: (event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                closeSearch();
+              }
+            },
+          }),
+          // With a term in the box this clears it; empty, it puts the box away.
+          h('button', {
+            key: 'clear',
+            type: 'button',
+            className: 'dtn-search-clear',
+            title: searching ? t('searchClear') : t('searchHide'),
+            'aria-label': searching ? t('searchClear') : t('searchHide'),
+            onClick: searching ? clearSearch : closeSearch,
+          }, '×'),
+        ]);
 
-      /** The magnifier: it opens the field, and closes it again once open. */
-      const searchToggle = h('button', {
-        key: 'search-toggle',
-        type: 'button',
-        className: 'dtn-search-toggle' + (showSearch === true ? ' is-on' : ''),
-        title: showSearch === true ? t('searchHide') : t('searchLabel'),
-        'aria-label': t('searchLabel'),
-        'aria-expanded': showSearch === true,
-        onClick: () => {
-          if (showSearch === true) {
-            closeSearch();
-            return;
-          }
-          setSearchOpen(true);
-        },
-      }, h(SearchGlyph, null));
-
-      const filterRow = h('div', { key: 'filter', className: 'dtn-filterbar' }, [
-        searchBar,
-        h('div', { key: 'line', className: 'dtn-filterline' }, [
-          allTags.length === 0 ? null : h('div', {
-            key: 'tags',
-            className: 'dtn-filter',
-            role: 'group',
-            'aria-label': t('tagFilterLabel'),
-          }, [
-            h('span', { key: 'label', className: 'dtn-foot-note' }, t('tagFilterLabel')),
-            h('button', {
-              key: 'all',
-              type: 'button',
-              className: 'dtn-tag' + (tagFilter === null ? ' is-on' : ''),
-              'aria-pressed': tagFilter === null,
-              onClick: () => {
-                setTagFilter(null);
-                setVisibleGroups(FIRST_GROUPS);
-              },
-            }, t('tagAll')),
-            ...allTags.map((tag) => h('button', {
-              key: tag.key,
-              type: 'button',
-              className: 'dtn-tag' + (tagFilter !== null && tagKey(tagFilter) === tag.key ? ' is-on' : ''),
-              style: tagStyle(tag.name, tagFilter !== null && tagKey(tagFilter) === tag.key),
-              'aria-pressed': tagFilter !== null && tagKey(tagFilter) === tag.key,
-              onClick: () => {
-                setTagFilter(tagFilter !== null && tagKey(tagFilter) === tag.key ? null : tag.name);
-                setVisibleGroups(FIRST_GROUPS);
-              },
-            }, tag.name + ' ' + tag.count)),
-          ]),
-          searchToggle,
+      const filterRow = h('div', { key: 'filter', className: 'dtn-filterline' }, [
+        allTags.length === 0 ? null : h('div', {
+          key: 'tags',
+          className: 'dtn-filter',
+          role: 'group',
+          'aria-label': t('tagFilterLabel'),
+        }, [
+          h('span', { key: 'label', className: 'dtn-foot-note' }, t('tagFilterLabel')),
+          h('button', {
+            key: 'all',
+            type: 'button',
+            className: 'dtn-tag' + (tagFilter === null ? ' is-on' : ''),
+            'aria-pressed': tagFilter === null,
+            onClick: () => {
+              setTagFilter(null);
+              setVisibleGroups(FIRST_GROUPS);
+            },
+          }, t('tagAll')),
+          ...allTags.map((tag) => h('button', {
+            key: tag.key,
+            type: 'button',
+            className: 'dtn-tag' + (tagFilter !== null && tagKey(tagFilter) === tag.key ? ' is-on' : ''),
+            style: tagStyle(tag.name, tagFilter !== null && tagKey(tagFilter) === tag.key),
+            'aria-pressed': tagFilter !== null && tagKey(tagFilter) === tag.key,
+            onClick: () => {
+              setTagFilter(tagFilter !== null && tagKey(tagFilter) === tag.key ? null : tag.name);
+              setVisibleGroups(FIRST_GROUPS);
+            },
+          }, tag.name + ' ' + tag.count)),
         ]),
+        searchControl,
       ]);
 
       return h('div', {
