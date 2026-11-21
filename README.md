@@ -22,9 +22,15 @@ notes, ignoring case. The field stays open while a term is active, so an active 
 invisible. It combines with the tag filter, reports how many entries matched, says so when nothing
 does, and clears and puts itself away on Esc or the ×.
 
-**Progress.** Any entry can carry a 0–100% value. Below 100% the bar uses the page accent colour;
-at 100% it turns green and the entry counts as done. Setting the value back below 100% reopens it,
-so the checkbox and the percentage never disagree.
+**Progress.** Any entry can carry a 0–100% value, set where the value shows: the `+进度` action on
+the card opens a control in place with quick choices (25 / 50 / 75 / 100), a slider and a field for
+an exact number, and it applies at once rather than costing an edit session. Below 100% the bar
+uses the page accent colour; at 100% it turns green and the entry counts as done. Setting the
+value back below 100% reopens it, so the checkbox and the percentage never disagree. **不计进度**
+takes the entry out of the in-progress tally without touching its completion state, which is not
+the same as 0%: 0% means planned but not started. The entry editor offers the same control, and —
+unlike before — there is no switch to tick first, so setting a value can never land on 50% by
+accident.
 
 **Links.** Paste a whole line such as `https://example.com/task/ABC-1 《some title》` and the
 address is extracted while the rest becomes the title. Bare hosts get `https://` added; only

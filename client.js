@@ -116,8 +116,12 @@ window.__ModuleLoader__.load({
       'theme.plain': '跟随应用',
       progressLabel: '进度',
       progressSet: '设置进度',
-      progressClear: '清除进度',
       progressAt: '{percent}%',
+      progressNone: '不计进度',
+      progressNoneHint: '不计入「进行中」统计；0% 表示已计划但尚未开始',
+      progressHint: '100% 即视为完成，调回 100% 以下会重新变为未完成',
+      progressDown: '减 5%',
+      progressUp: '加 5%',
       progressInProgress: '进行中',
       summaryProgressHeading: '进行中',
       agentPromptProgress: '进行中：',
@@ -327,8 +331,12 @@ window.__ModuleLoader__.load({
       'theme.plain': 'Follow the app',
       progressLabel: 'Progress',
       progressSet: 'Set progress',
-      progressClear: 'Clear progress',
       progressAt: '{percent}%',
+      progressNone: 'No progress',
+      progressNoneHint: 'Left out of the in-progress tally; 0% means planned but not started',
+      progressHint: '100% counts as done; going below 100% reopens the entry',
+      progressDown: '5% less',
+      progressUp: '5% more',
       progressInProgress: 'In progress',
       summaryProgressHeading: 'In progress',
       agentPromptProgress: 'In progress:',
@@ -789,6 +797,69 @@ html[data-platform='darwin'] .dtn-head {
   accent-color: var(--dtn-accent);
   cursor: pointer;
 }
+
+/* --------------------------------------------------------------- progress -- */
+
+/* The progress control, shared by the card and the entry editor: quick choices,
+   a slider, and a field for an exact number. */
+.dtn-progress-ctl { display: flex; flex-direction: column; gap: 8px; width: 100%; min-width: 0; }
+.dtn-progress-choices { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.dtn-progress-chip {
+  appearance: none;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.dtn-progress-chip:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-active); }
+.dtn-progress-chip.is-on {
+  color: var(--dsw-alias-label-on-color);
+  background: var(--dtn-accent);
+  border-color: var(--dtn-accent);
+}
+/* "No progress" is not one of the values: it sits apart, at the end. */
+.dtn-progress-chip.is-clear { margin-left: auto; }
+.dtn-progress-row { display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0; }
+.dtn-progress-step {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--dsw-alias-label-secondary);
+  background: var(--dsw-alias-interactive-bg-hover);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 7px;
+}
+.dtn-progress-step:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-active); }
+.dtn-progress-num {
+  box-sizing: border-box;
+  width: 56px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: right;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-specific-input-major);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 7px;
+  font-variant-numeric: tabular-nums;
+}
+.dtn-progress-sign { font-size: 12.5px; color: var(--dsw-alias-label-secondary); }
 .dtn-note-note {
   appearance: none;
   padding: 0;
@@ -4035,6 +4106,128 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       ]);
     }
 
+    /** The quick choices, and the step the slider and the steppers move by. */
+    const PROGRESS_CHOICES = [25, 50, 75, 100];
+    const PROGRESS_STEP = 5;
+
+    /**
+     * The progress control. The card and the entry editor both use it, so a
+     * value is set the same way wherever it appears: a preset, a slider, or an
+     * exact number, with no switch to turn on first.
+     *
+     * 100 also completes the entry, and anything below 100 reopens it — that
+     * rule belongs to the store, not here. "No progress" clears the value and
+     * leaves the completion state alone, which is not the same as 0%: 0% means
+     * planned but not started, no value means it is not counted as in progress.
+     *
+     * The parent owns the value, so the card can apply it at once while the
+     * editor keeps it in its form until save.
+     */
+    function ProgressControl({ t, value, onChange }) {
+      // While the slider is being dragged, and while a number is half-typed,
+      // only the local value moves; the change is applied when the interaction
+      // ends, so one drag is one change rather than one per pixel.
+      const [sliding, setSliding] = useState(null);
+      const [typed, setTyped] = useState(null);
+      const shown = sliding === null ? value : sliding;
+      // One ternary each, so neither nests: what the value is when empty, then
+      // whether a half-typed number is overriding it.
+      const committed = value === null ? '' : String(value);
+      const draft = typed === null ? committed : typed;
+
+      const apply = (number) => {
+        setSliding(null);
+        setTyped(null);
+        onChange(Math.max(0, Math.min(100, Math.round(number))));
+      };
+
+      const applyDraft = () => {
+        const text = draft.trim();
+        setTyped(null);
+        if (text === '') {
+          onChange(null);
+          return;
+        }
+        const number = Number(text);
+        if (Number.isFinite(number)) apply(number);
+      };
+
+      return h('div', { className: 'dtn-progress-ctl' }, [
+        h('div', { key: 'choices', className: 'dtn-progress-choices' }, [
+          ...PROGRESS_CHOICES.map((choice) => h('button', {
+            key: 'p' + choice,
+            type: 'button',
+            className: 'dtn-progress-chip' + (value === choice ? ' is-on' : ''),
+            'aria-pressed': value === choice,
+            onClick: () => { apply(choice); },
+          }, t('progressAt', { percent: choice }))),
+          h('button', {
+            key: 'none',
+            type: 'button',
+            className: 'dtn-progress-chip is-clear' + (value === null ? ' is-on' : ''),
+            'aria-pressed': value === null,
+            title: t('progressNoneHint'),
+            onClick: () => { onChange(null); },
+          }, t('progressNone')),
+        ]),
+        h('div', { key: 'row', className: 'dtn-progress-row' }, [
+          h('input', {
+            key: 'range',
+            className: 'dtn-range',
+            type: 'range',
+            min: 0,
+            max: 100,
+            step: PROGRESS_STEP,
+            value: shown === null ? 0 : shown,
+            'aria-label': t('progressLabel'),
+            onChange: (event) => { setSliding(Number(event.target.value)); },
+            onPointerUp: (event) => { apply(Number(event.currentTarget.value)); },
+            onKeyUp: (event) => { apply(Number(event.currentTarget.value)); },
+            onBlur: () => { if (sliding !== null) apply(sliding); },
+          }),
+          h('button', {
+            key: 'down',
+            type: 'button',
+            className: 'dtn-progress-step',
+            title: t('progressDown'),
+            'aria-label': t('progressDown'),
+            onClick: () => { apply((shown === null ? 0 : shown) - PROGRESS_STEP); },
+          }, '−'),
+          h('input', {
+            key: 'exact',
+            className: 'dtn-progress-num',
+            type: 'number',
+            min: 0,
+            max: 100,
+            step: PROGRESS_STEP,
+            value: draft,
+            placeholder: '—',
+            'aria-label': t('progressLabel'),
+            onChange: (event) => { setTyped(event.target.value); },
+            onKeyDown: (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyDraft();
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                setTyped(null);
+              }
+            },
+            onBlur: applyDraft,
+          }),
+          h('span', { key: 'sign', className: 'dtn-progress-sign' }, '%'),
+          h('button', {
+            key: 'up',
+            type: 'button',
+            className: 'dtn-progress-step',
+            title: t('progressUp'),
+            'aria-label': t('progressUp'),
+            onClick: () => { apply((shown === null ? 0 : shown) + PROGRESS_STEP); },
+          }, '＋'),
+        ]),
+      ]);
+    }
+
     /**
      * One entry as a sticky note: a paper-coloured card with the entry's own
      * colour, a slight tilt on the wall, its links, its progress trail, and its
@@ -4055,6 +4248,9 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       const carried = item.done ? 0 : daysBetween(item.day, api.today);
       const age = daysBetween(dayKeyOf(item.createdAt), api.today);
       const backfilled = item.day !== dayKeyOf(item.createdAt);
+      // Progress opens in place and applies at once, so a daily "how far now?"
+      // never costs an edit session.
+      const [progressOpen, setProgressOpen] = useState(false);
       // A note or a link is added right on the card: one inline draft at a time,
       // so the full editor stays reserved for actually editing the entry.
       const [draft, setDraft] = useState(null);
@@ -4187,6 +4383,20 @@ button.dtn-tag:hover { filter: brightness(0.95); }
             title: t('linkAdd'),
             onClick: () => { openDraft('link'); },
           }, '+', t('linksLabel')),
+          h('button', {
+            key: 'progress',
+            type: 'button',
+            className: 'dtn-note-quick' + (progressOpen === true ? ' is-on' : ''),
+            'aria-expanded': progressOpen === true,
+            title: t('progressSet'),
+            onClick: () => {
+              setProgressOpen(progressOpen !== true);
+              setDraft(null);
+              setEditingLog(null);
+            },
+          }, '+', item.progress === null
+            ? t('progressLabel')
+            : t('progressAt', { percent: item.progress })),
           h(IconButton, {
             key: 'add',
             label: t('addChild'),
@@ -4380,6 +4590,14 @@ button.dtn-tag:hover { filter: brightness(0.95); }
           className: 'dtn-note-progress-fill' + (item.progress >= 100 ? ' is-done' : ''),
           style: { width: item.progress + '%' },
         })),
+        // The control opens in place, under the bar it changes, and applies at
+        // once: moving progress is a daily action, not an edit session.
+        progressOpen !== true ? null : h('div', { key: 'progress-ctl', className: 'dtn-inline-add' },
+          h(ProgressControl, {
+            t,
+            value: item.progress,
+            onChange: (next) => { api.setProgress(item.id, next); },
+          })),
         // Footnotes read in one order: tags and links first, then the progress
         // trail at the very bottom, where a growing history belongs. A link
         // being added shows its own small form at the foot.
@@ -4421,8 +4639,9 @@ button.dtn-tag:hover { filter: brightness(0.95); }
       const [tagText, setTagText] = useState('');
       const [day, setDay] = useState(isEdit ? item.day : target.parentDay);
       const [done, setDone] = useState(isEdit ? item.done : false);
-      const [progressOn, setProgressOn] = useState(isEdit && item.progress !== null);
-      const [progress, setProgress] = useState(isEdit && item.progress !== null ? item.progress : 0);
+      // Progress is one value, not a switch plus a number: there is no checkbox
+      // to tick before it can be set, and ticking one cannot land on 50%.
+      const [progress, setProgress] = useState(isEdit ? item.progress : null);
       const [linkUrl, setLinkUrl] = useState('');
       const [linkTitle, setLinkTitle] = useState('');
       const [linkError, setLinkError] = useState(null);
@@ -4456,7 +4675,7 @@ button.dtn-tag:hover { filter: brightness(0.95); }
           return;
         }
         const finalTags = mergeTags(tags, parseTagText(tagText));
-        const nextProgress = progressOn ? progress : null;
+        const nextProgress = progress;
         if (isEdit) {
           const changedProgress = nextProgress !== item.progress;
           // Progress owns the completion state when it changes; otherwise the
@@ -4604,47 +4823,20 @@ button.dtn-tag:hover { filter: brightness(0.95); }
           }, tag)),
       ]));
 
-        rows.push(h('div', { key: 'progress', className: 'dtn-panel-row' }, [
-        h('label', { key: 'on', className: 'dtn-check-line' }, [
-          h('input', {
-            key: 'cb',
-            className: 'dtn-cb',
-            type: 'checkbox',
-            checked: progressOn,
-            onChange: (event) => {
-              const on = event.target.checked;
-              setProgressOn(on);
-              // A fresh switch on starts somewhere useful instead of at zero.
-              if (on && progress === 0) setProgress(50);
-            },
+        rows.push(h('div', { key: 'progress', className: 'dtn-panel-block' }, [
+          h('div', { key: 'head', className: 'dtn-panel-head' }, [
+            h('span', { key: 'title', className: 'dtn-card-title' }, t('progressLabel')),
+            h('span', { key: 'hint', className: 'dtn-foot-note' }, t('progressHint')),
+          ]),
+          // One control, no switch to tick first: picking a value is the only way
+          // to set one, so nothing lands on 50% by accident.
+          h(ProgressControl, {
+            key: 'ctl',
+            t,
+            value: progress,
+            onChange: setProgress,
           }),
-          h('span', { key: 'label' }, t('progressSet')),
-        ]),
-        progressOn !== true ? null : h('input', {
-          key: 'range',
-          className: 'dtn-range',
-          type: 'range',
-          min: 0,
-          max: 100,
-          step: 5,
-          value: progress,
-          'aria-label': t('progressLabel'),
-          onChange: (event) => { setProgress(Number(event.target.value)); },
-        }),
-        progressOn !== true ? null : h('span', {
-          key: 'value',
-          className: 'dtn-note-pct' + (progress >= 100 ? ' is-done' : ' is-open'),
-        }, t('progressAt', { percent: progress })),
-        progressOn !== true ? null : h('button', {
-          key: 'clear',
-          type: 'button',
-          className: 'dtn-btn is-quiet',
-          onClick: () => {
-            setProgressOn(false);
-            setProgress(0);
-          },
-        }, t('progressClear')),
-      ]));
+        ]));
       }
 
       /**
